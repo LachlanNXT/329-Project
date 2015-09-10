@@ -17,16 +17,18 @@
 
  */
 
-
+int ledPin = 7;
+int ledState = HIGH;
 int zeroPin = 8;
-int ledPin = 9;    // LED connected to digital pin 9
-int ledState = LOW; 
+int PWMPin = 9;    // LED connected to digital pin 9
+int PWMState = LOW; 
 int zeroState = LOW;
 int fadeValue1;
 
 void setup() {
   pinMode(zeroPin, OUTPUT);
-  digitalWrite(zeroPin, ledState);
+  digitalWrite(zeroPin, zeroState);
+  attachInterrupt(0,PinChange,CHANGE);
   // nothing happens in setup
 }
 
@@ -40,6 +42,7 @@ void loop() {
       zeroState = LOW;
       
       digitalWrite(zeroPin, zeroState);
+      digitalWrite(ledPin, ledState);
   // fade in from min to max in increments of 5 points:
   for (int fadeValue = 0 ; fadeValue <= 255; fadeValue += 5) {
     // sets the value (range from 0 to 255):
@@ -49,7 +52,7 @@ void loop() {
       else
       fadeValue1 = fadeValue;
       
-    analogWrite(ledPin, fadeValue1);
+    analogWrite(PWMPin, fadeValue1);
     // wait for 30 milliseconds to see the dimming effect
     delay(30);
   }
@@ -63,11 +66,14 @@ void loop() {
       else
       fadeValue1 = fadeValue;
       
-    analogWrite(ledPin, fadeValue1);
+    analogWrite(PWMPin, fadeValue1);
     // wait for 30 milliseconds to see the dimming effect
     delay(30);
   }
   }
 }
 
-
+void PinChange()
+{
+  ledState = !ledState;
+}
