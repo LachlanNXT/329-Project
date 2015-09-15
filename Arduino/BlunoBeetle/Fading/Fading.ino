@@ -17,10 +17,10 @@
 
  */
 
-int ledPin = 7;
+int ledPin = 2;
 int ledState = HIGH;
-int zeroPin = 8;
-int PWMPin = 9;    // LED connected to digital pin 9
+int zeroPin = 4;
+int PWMPin = 3;    // LED connected to digital pin 9
 int PWMState = LOW; 
 int zeroState = LOW;
 int fadeValue1;
@@ -28,7 +28,7 @@ int fadeValue1;
 void setup() {
   pinMode(zeroPin, OUTPUT);
   digitalWrite(zeroPin, zeroState);
-  attachInterrupt(0,PinChange,CHANGE);
+  //   attachInterrupt(0,PinChange,CHANGE);
   // nothing happens in setup
 }
 
