@@ -27,7 +27,7 @@ function SSL_2()
 %     You should have received a copy of the GNU General Public len_micense
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-% MODIFIED BY LACHLAN ROBINSON GROUP 8 2015
+%% MODIFIED BY LACHLAN ROBINSON GROUP 8 2015
 
 % robot and ball state specifiers
 close all
@@ -44,8 +44,8 @@ w = 0;
 theta = 0;
 
 % gains for proportional controller
-kv = 0.5;
-kw = 0.1;
+kv = 0.5; %translational velocity
+kw = 0.1; %angular velocity
 
 % static field parameters
 FIELD_SIZE_X = 2.0;
@@ -55,19 +55,22 @@ GOAL_MAX_Y = 1.35;
 BALL_RADIUS = 0.043 / 2.0;
 ROBOT_RADIUS = 0.180 / 2.0;
 BALL_SLOW = 1.0 - 0.01;
-Dtol = 2.5;
+Dtol = 2.5; %Closeness to obstacles tolerance
+measurementRange = 0.5; %Max range of ball/obstacle sensing
+measurementSD = 0.02; %Standard deviation of measurement error
+searchPos = [0.5,0.5;1.5,1.5;0.5,1.5;0.5,1.5];
+searchIndex = 0;
 
 % dynamic navigator state variables
 score = 0;
 kicker = 8;
 seen = 0;
+search = 0;
 acquire = 0;
 getBall = 0;
 goToGoal = 0;
 lastSeen = [0, 0];
 obstruction = 0;
-Lbumper = [0,0];
-Rbumper = [0,0];
 
 % figure and setup for main loop
 fig_handle = figure('Position', [0 0 600 600]);
@@ -75,38 +78,47 @@ finished = 0;
 TIME_STEP = 0.02;
 
 % start positions and velocities
-ball = [FIELD_SIZE_X/2.0+0.1 FIELD_SIZE_Y/2.0, 0, 0, 0, 0];
-robot = [0 0 0, v*cos(theta), v*sin(theta), 0];
+ball = [FIELD_SIZE_X/2.0+0.1, FIELD_SIZE_Y/2.0, 0, 0, 0, 0];
+robot = [0, 0, 0, v*cos(theta), v*sin(theta), 0];
 obstacles = [0.1 0.2; 0.75 0.4; 1.2 1.5];
 
 time = 0;
 
-% main simulation loop
+%% Main simulation loop
 while (finished == 0)
-    try test = get(fig_handle); catch ME, break; end
     
     %Controller for a differential robot
     
     % robot position. All other positions are robot relative
     rPos = [robot(X), robot(Y)];
-    posB = [ball(X), ball(Y)] - rPos;
+    bPos = [ball(X), ball(Y)];
+    posB = bPos - rPos;
     % angle of ball relative to robot
     thetaB = rot(posB, theta);
 
     % if the ball is within field of vision
-    if abs(thetaB)<pi/6
+    if (abs(thetaB)<pi/6 && Edist(rPos,bPos)<measurementRange)
         % note ball has been seen and save position
         seen = 1;
         if ~getBall && ~goToGoal
         acquire = 1;
+        search = 0;
         end
-        lastSeen = [ball(X), ball(Y)];
+        measurementError = measurementSD*randn(1,2);
+        lastSeen = [ball(X), ball(Y)] + measurementError;
     else
-        
+        search = 1;
         % if not seen head to centre of field
-        goal = [FIELD_SIZE_X/2.0, FIELD_SIZE_Y/2.0];
         seen = 0;
         
+    end
+    
+    if search && ~acquire
+        goal = searchPos(searchIndex+1,:);
+        % if close enough to goal position, move on
+        if (norm(goal - rPos) <0.03)
+            searchIndex = mod(searchIndex+1,3);
+        end
     end
     
     if acquire && ~getBall
@@ -114,7 +126,7 @@ while (finished == 0)
         % last seen location of the ball
         goal = [lastSeen(1) - ROBOT_RADIUS*Dtol, lastSeen(2)];
 
-        % if close enough to goal, move on
+        % if close enough to goal (ball), move on
         if (norm(goal - rPos) <0.03)
             getBall = 1;
             acquire = 0;
@@ -262,14 +274,7 @@ while (finished == 0)
      robot(Y) = robot(Y) + robot(VY) * TIME_STEP;   
      
      vPos = [robot(VX), robot(VY)];
-     vlen = norm(vPos); vPos = vPos./vlen;
-     [~, leftB] = rot(vPos, pi/6);
-     [~, rightB] = rot(vPos, -pi/6);
-     Lbumper(1) = robot(X) + leftB(1);
-     Lbumper(2) = robot(Y) + leftB(2);
-     Rbumper(1) = robot(X) + rightB(1);
-     Rbumper(2) = robot(Y) + rightB(2);
-     
+     vlen = norm(vPos); vPos = vPos./vlen;     
      
     % collision detection
     % makes many assumptions like
@@ -300,17 +305,7 @@ while (finished == 0)
     end    
     
     for robot_i = 0:size(obstacles, 1)
-        if robot_i == -2
-            rx = Lbumper(1);
-            ry = Lbumper(2);
-            rvx = robot(VX)*kicker;
-            rvy = robot(VY)*kicker;
-        elseif robot_i == -1
-            rx = Rbumper(1);
-            ry = Rbumper(2);
-            rvx = robot(VX)*kicker;
-            rvy = robot(VY)*kicker;
-        elseif robot_i == 0
+        if robot_i == 0
             rx = robot(X);
             ry = robot(Y);
             rvx = robot(VX)*kicker;
@@ -371,7 +366,9 @@ while (finished == 0)
     text(0,2.1,num2str(score));
     % draw field of view and heading
     rPos = [robot(X), robot(Y)];
-    vPos = [robot(X) + robot(VX), robot(Y) + robot(VY)];
+    rVel = [robot(VX), robot(VY)];
+    rVel = rVel./norm(rVel)*measurementRange;
+    vPos = [robot(X) + rVel(1), robot(Y) + rVel(2)];
     line([rPos(1), vPos(1)], [rPos(2), vPos(2)]);
     [~, leftA] = rot(vPos - rPos, pi/6);
     leftAG = leftA+rPos;
