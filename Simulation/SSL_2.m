@@ -58,7 +58,7 @@ BALL_SLOW = 1.0 - 0.01;
 Dtol = 2.5; %Closeness to obstacles tolerance
 measurementRange = 0.5; %Max range of ball/obstacle sensing
 measurementSD = 0.02; %Standard deviation of measurement error
-searchPos = [0.5,0.5;1.5,1.5;0.5,1.5;0.5,1.5];
+searchPos = [0.5,0.5;1.5,1.5;0.5,1.5;1.5,0.5];
 searchIndex = 0;
 
 % dynamic navigator state variables
@@ -137,6 +137,9 @@ while (finished == 0)
         % if in position to get ball, get it
         % by setting goal position to ball location
         goal = lastSeen;
+        if (norm(goal - rPos) < BALL_RADIUS/2)
+            getBall = 0;
+        end
     
     end
     
@@ -144,7 +147,7 @@ while (finished == 0)
         
         goal = [1.8,1];
         
-        if (norm(goal - rPos) <0.03)
+        if (norm(goal - rPos) < 0.03) || ~seen
             goToGoal = 0;
         end
         
