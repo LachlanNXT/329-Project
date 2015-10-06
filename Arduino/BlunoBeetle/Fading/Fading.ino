@@ -17,10 +17,10 @@
 
  */
 
-int ledPin = 2;
+int ledPin = 11;
 int ledState = HIGH;
 int zeroPin = 4;
-int PWMPin = 3;    // LED connected to digital pin 9
+int PWMPin = 5;    // LED connected to digital pin 9
 int PWMState = LOW; 
 int zeroState = LOW;
 int fadeValue1;

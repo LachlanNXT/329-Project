@@ -45,7 +45,7 @@ theta = 0;
 
 % gains for proportional controller
 kv = 0.5; %translational velocity
-kw = 0.1; %angular velocity
+kw = 5; %angular velocity
 
 % static field parameters
 FIELD_SIZE_X = 2.0;
@@ -55,9 +55,13 @@ GOAL_MAX_Y = 1.35;
 BALL_RADIUS = 0.043 / 2.0;
 ROBOT_RADIUS = 0.180 / 2.0;
 BALL_SLOW = 1.0 - 0.01;
+
+% Other static parameters
 Dtol = 2.5; %Closeness to obstacles tolerance
 measurementRange = 0.5; %Max range of ball/obstacle sensing
 measurementSD = 0.02; %Standard deviation of measurement error
+odoASD = 0.01; % odometry angle error
+odoTSD = 0.01; % odometry translational error
 searchPos = [0.5,0.5;1.5,1.5;0.5,1.5;1.5,0.5];
 searchIndex = 0;
 
@@ -71,6 +75,16 @@ getBall = 0;
 goToGoal = 0;
 lastSeen = [0, 0];
 obstruction = 0;
+
+% Monte Carlo
+MCx = 2*rand(50,1);
+MCy = 2*rand(50,1);
+rRel = zeros(50,1);
+MCt = -pi+2*pi*rand(50,1);
+MCtRel = zeros(50,1);
+L = [odoTSD, 0; 0, odoASD];
+weights = zeros(50,1);
+W0 = 0.001;
 
 % figure and setup for main loop
 fig_handle = figure('Position', [0 0 600 600]);
@@ -93,9 +107,26 @@ while (finished == 0)
     rPos = [robot(X), robot(Y)];
     bPos = [ball(X), ball(Y)];
     posB = bPos - rPos;
+    rposB = norm(posB);
     % angle of ball relative to robot
     thetaB = rot(posB, theta);
 
+    % localisation
+    MCxRel = ball(X) - MCx;
+    MCyRel = ball(Y) - MCy;
+    rRel = sqrt(MCxRel.^2+MCyRel.^2);
+    for i = 1:length(MCt)
+        MCtRel(i) = rot([MCxRel(i),MCyRel(i)], MCt(i));
+    end
+    v = [rRel - rposB, MCtRel - thetaB];
+    
+    for i = 1:length(MCt)
+        weights(i) = exp(-0.5 * v(i,:) * L * v(i,:)') + W0;
+    end
+    
+    
+    
+    
     % if the ball is within field of vision
     if (abs(thetaB)<pi/6 && Edist(rPos,bPos)<measurementRange)
         % note ball has been seen and save position
@@ -117,7 +148,7 @@ while (finished == 0)
         goal = searchPos(searchIndex+1,:);
         % if close enough to goal position, move on
         if (norm(goal - rPos) <0.03)
-            searchIndex = mod(searchIndex+1,3);
+            searchIndex = mod(searchIndex+1,4);
         end
     end
     
@@ -256,15 +287,25 @@ while (finished == 0)
     w = kw * thetaB;
     v = kv * norm(goalR) +0.1;
     
-    theta = theta + w;
+    theta = theta + w*TIME_STEP;
+    odoAError = odoASD*randn;
+    MCt = MCt + w*TIME_STEP + odoAError;
     if theta<-pi
         theta = theta+2*pi;
     end
     if theta>pi
         theta = theta-2*pi;
     end
+    for i = 1:length(MCt)
+        if MCt<-pi
+        MCt = MCt+2*pi;
+        end
+        if MCt>pi
+        MCt = MCt-2*pi;
+        end
+    end
     robot(VX) = v*cos(theta);
-    robot(VY) = v*sin(theta);    
+    robot(VY) = v*sin(theta);
     
     % update the ball by the time step
     ball(VX) = ball(VX) * BALL_SLOW;
@@ -274,7 +315,10 @@ while (finished == 0)
 
     % update the robot by the time step
      robot(X) = robot(X) + robot(VX) * TIME_STEP;
-     robot(Y) = robot(Y) + robot(VY) * TIME_STEP;   
+     robot(Y) = robot(Y) + robot(VY) * TIME_STEP; 
+     odoTError = odoTSD*randn(1,2);
+     MCx = MCx + (robot(VX)*TIME_STEP+odoTError(1));
+     MCy = MCy + (robot(VY)*TIME_STEP+odoTError(2));
      
      vPos = [robot(VX), robot(VY)];
      vlen = norm(vPos); vPos = vPos./vlen;     
@@ -286,6 +330,14 @@ while (finished == 0)
     %   no slip during collision
     %   ball has zero mass, robot has infinte ball
     if (ball(X) < BALL_RADIUS)
+       if (ball(Y)<GOAL_MAX_Y && ball(Y)>GOAL_MIN_Y)
+         score = score+1;
+         obstruction = 0;
+         getBall = 0;
+         ball(X) = rand*2;
+         ball(Y) = rand*2;
+       end
+        
        ball(VX) = -ball(VX);
     end
     if (ball(Y) < BALL_RADIUS)
@@ -364,9 +416,12 @@ while (finished == 0)
     % RENDERING ADDITIONS:
     
     % draw goal
-    rectangle('Position', [FIELD_SIZE_X, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'r');
+    rectangle('Position', [FIELD_SIZE_X, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'y');
+    rectangle('Position', [0, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'b');
+    
     % draw score
     text(0,2.1,num2str(score));
+    
     % draw field of view and heading
     rPos = [robot(X), robot(Y)];
     rVel = [robot(VX), robot(VY)];
@@ -379,10 +434,16 @@ while (finished == 0)
     [~, rightA] = rot(vPos - rPos, -pi/6);
     rightAG = rightA+rPos;
     line([rPos(1), rightAG(1)], [rPos(2), rightAG(2)]);
+    
     % draw navigation lines
     plot([rPos(1), goal(1)], [rPos(2), goal(2)], 'r-');
+    
     % is there an obstruction    
     text(1,2.1,num2str(obstruction));
+    
+    % plot particles
+    plot(MCx,MCy,'r.');
+    
     % sex axis
     axis([-0.2, FIELD_SIZE_X + 0.2, -0.2, FIELD_SIZE_Y + 0.2]);
 
