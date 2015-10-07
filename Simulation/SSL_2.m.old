@@ -84,8 +84,7 @@ rRel = zeros(Pcount,1);
 MCt = -pi+2*pi*rand(Pcount,1);
 MCtRel = zeros(Pcount,1);
 L = [1, 0; 0, 1];
-weights = zeros(Pcount,1)+(0.5+rand(Pcount,1))*(1/Pcount);
-wCutoff = Pcount - round(Pcount/20);
+weights = zeros(Pcount,1);
 W0 = 0.001;
 
 % figure and setup for main loop
@@ -96,8 +95,6 @@ TIME_STEP = 0.02;
 % start positions and velocities
 ball = [FIELD_SIZE_X/2.0+0.1, FIELD_SIZE_Y/2.0, 0, 0, 0, 0];
 robot = [0.01, 0.01, 0, v*cos(theta), v*sin(theta), 0];
-robotEst = zeros(1,6);
-thetaEst = 0;
 obstacles = [0.1 0.2; 0.75 0.4; 1.2 1.5];
 corners = [0,0; 0,FIELD_SIZE_Y; FIELD_SIZE_X,0; FIELD_SIZE_X,FIELD_SIZE_Y];
 time = 0;
@@ -131,29 +128,6 @@ while (finished == 0)
                 weights(j) = norm( V(j,:))^(-1) + W0;
             end
             weights = weights./max(weights);
-            histWeights = weights./sum(weights);
-            pause
-            cumsum(hist(histWeights))
-            pause
-            
-            data = [MCx, MCy, MCt, V, weights];
-            sortedData = sortrows(data,5);
-            
-            selector = rand(Pcount,1);
-            
-            
-%             Sweights = sort(weights);
-%             robotEst = zeros(1,6);
-%             thetaEst = 0;
-%             for j = wCutoff:Pcount;
-%                 place = find(weights == Sweights(j));
-%                 robotEst(X) = robotEst(X) + MCx(place);
-%                 robotEst(Y) = robotEst(Y) + MCy(place);
-%                 thetaEst = thetaEst + MCt(place);
-%             end
-%             robotEst(X) = robotEst(X)/(Pcount-(wCutoff-1));
-%             robotEst(Y) = robotEst(Y)/(Pcount-(wCutoff-1));
-%             thetaEst = thetaEst/(Pcount-(wCutoff-1));
         end
     end
     
@@ -352,7 +326,6 @@ while (finished == 0)
     MCx = MCx + (robot(VX)*TIME_STEP+odoTError(:,1));
     MCy = MCy + (robot(VY)*TIME_STEP+odoTError(:,2));
     
-    % keeping particles inside the field
     for i=1:Pcount
         
         if MCx(i)>FIELD_SIZE_X
@@ -362,7 +335,7 @@ while (finished == 0)
             MCx(i) = max(MCx)*rand;
         end
         if MCy(i)>FIELD_SIZE_Y
-            MCy(i) = min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand;
+            MCy(i) = min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand; 
         end
         if MCy(i)<0
             MCy(i) = max(MCy)*rand;
@@ -370,21 +343,12 @@ while (finished == 0)
         
     end
     
-    % particle filter pose estimator
-    Sweights = sort(weights);
-    robotEst = zeros(1,6);
-    thetaEst = 0;
-    for j = wCutoff:Pcount;
-        place = find(weights == Sweights(j),1);
-        robotEst(X) = robotEst(X) + MCx(place);
-        robotEst(Y) = robotEst(Y) + MCy(place);
-        thetaEst = thetaEst + MCt(place);
-    end
-    robotEst(X) = robotEst(X)/(Pcount-(wCutoff-1));
-    robotEst(Y) = robotEst(Y)/(Pcount-(wCutoff-1));
-    thetaEst = thetaEst/(Pcount-(wCutoff-1));
     
-    % used for plotting and simulation only stuff
+    
+    
+    
+    
+    
     vPos = [robot(VX), robot(VY)];
     vlen = norm(vPos); vPos = vPos./vlen;
     
@@ -508,13 +472,6 @@ while (finished == 0)
     
     % plot particles
     plot(MCx,MCy,'r.');
-    
-    % plot pose estimate
-    rEstPos = [robotEst(X), robotEst(Y)];
-    vPos = [rEstPos(1) + .2*cos(thetaEst), rEstPos(2) + .2*sin(thetaEst)];
-    line([rEstPos(1), vPos(1)], [rEstPos(2), vPos(2)]);
-    plot(rEstPos(1),rEstPos(2),'b*')    
-    
     
     % sex axis
     axis([-0.2, FIELD_SIZE_X + 0.2, -0.2, FIELD_SIZE_Y + 0.2]);

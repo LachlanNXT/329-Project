@@ -130,18 +130,13 @@ while (finished == 0)
             for j = 1:Pcount
                 weights(j) = norm( V(j,:))^(-1) + W0;
             end
-            weights = weights./max(weights);
-            histWeights = weights./sum(weights);
+            weights = weights./sum(weights);
             pause
-            cumsum(hist(histWeights))
+            cumsum(hist(weights))
             pause
             
             data = [MCx, MCy, MCt, V, weights];
             sortedData = sortrows(data,5);
-            
-            selector = rand(Pcount,1);
-            
-            
 %             Sweights = sort(weights);
 %             robotEst = zeros(1,6);
 %             thetaEst = 0;
