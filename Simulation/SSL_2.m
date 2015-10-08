@@ -77,11 +77,13 @@ lastSeen = [0, 0];
 obstruction = 0;
 
 % Monte Carlo
-Pcount = 100;
+Pcount = 500;
 MCx = 2*rand(Pcount,1);
 MCy = 2*rand(Pcount,1);
+% distance to landmark from each of the particles
 rRel = zeros(Pcount,1);
 MCt = -pi+2*pi*rand(Pcount,1);
+% relative angle to landmarks from each particle
 MCtRel = zeros(Pcount,1);
 L = [1, 0; 0, 1];
 weights = zeros(Pcount,1)+(0.5+rand(Pcount,1))*(1/Pcount);
@@ -111,11 +113,11 @@ while (finished == 0)
     rPos = [robot(X), robot(Y)];
     bPos = [ball(X), ball(Y)];
     posB = bPos - rPos;
-    rposB = norm(posB);
     % angle of ball relative to robot
     thetaB = rot(posB, theta);
     
-    % localisation
+    % localisation, weighting and resampling of particles using corners as
+    % landmarks
     for i = 1:4
         corner = corners(i,:) - rPos;
         thetaC = rot(corner, theta);
@@ -131,15 +133,33 @@ while (finished == 0)
                 weights(j) = norm( V(j,:))^(-1) + W0;
             end
             weights = weights./max(weights);
-            histWeights = weights./sum(weights);
-            pause
-            cumsum(hist(histWeights))
-            pause
+            newParticles = 1;
+            tempMCx = zeros(Pcount,1);
+            tempMCy = zeros(Pcount,1);
+            tempMCt = zeros(Pcount,1);
+            while newParticles<Pcount+1
+                randParticle = randi([1,Pcount]);
+                if weights(randParticle)>rand
+                    tempMCx(newParticles) = MCx(randParticle);
+                    tempMCy(newParticles) = MCy(randParticle);
+                    tempMCt(newParticles) = MCt(randParticle);
+                    newParticles = newParticles+1;
+                end
+            end
+            MCx = tempMCx;
+            MCy = tempMCy;
+            MCt = tempMCt;
             
-            data = [MCx, MCy, MCt, V, weights];
-            sortedData = sortrows(data,5);
             
-            selector = rand(Pcount,1);
+%             histWeights = weights./sum(weights);
+%             pause
+%             cumsum(hist(histWeights))
+%             pause
+            
+%             data = [MCx, MCy, MCt, V, weights];
+%             sortedData = sortrows(data,5);
+%             
+%             selector = rand(Pcount,1);
             
             
 %             Sweights = sort(weights);
@@ -355,16 +375,17 @@ while (finished == 0)
     % keeping particles inside the field
     for i=1:Pcount
         
-        if MCx(i)>FIELD_SIZE_X
+        if MCx(i)>FIELD_SIZE_X+0.2
             MCx(i) = min(MCx) + (FIELD_SIZE_X-min(MCx))*rand;
         end
-        if MCx(i)<0
+        if MCx(i)<0-0.2
             MCx(i) = max(MCx)*rand;
         end
-        if MCy(i)>FIELD_SIZE_Y
+        if MCy(i)>FIELD_SIZE_Y+0.2
             MCy(i) = min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand;
+            min(MCy)
         end
-        if MCy(i)<0
+        if MCy(i)<0-0.2
             MCy(i) = max(MCy)*rand;
         end
         
