@@ -119,9 +119,9 @@ while (finished == 0)
     % localisation, weighting and resampling of particles using corners as
     % landmarks
     for i = 1:4
-        corner = corners(i,:) - rPos;
-        thetaC = rot(corner, theta);
-        if (abs(thetaC)<pi/6 && Edist(rPos,corners(i,:))<measurementRange)
+        corner = corners(i,:) - rPos; %measured distance
+        thetaC = rot(corner, theta); %measured angle
+        if (abs(thetaC)<pi/6 && Edist(rPos,corners(i,:))<measurementRange) %if landmark seen
             MCxRel = corners(i,1)-MCx;
             MCyRel = corners(i,2)-MCy;
             rRel = sqrt(MCxRel.^2+MCyRel.^2);
@@ -503,7 +503,7 @@ while (finished == 0)
     
     % draw goal
     rectangle('Position', [FIELD_SIZE_X, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'y');
-    rectangle('Position', [0, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'b');
+    rectangle('Position', [-0.05, GOAL_MIN_Y, 0.05, GOAL_MAX_Y-GOAL_MIN_Y], 'FaceColor', 'b');
     
     % draw score
     text(0,2.1,num2str(score));
@@ -574,7 +574,7 @@ Cr = robot(y) - Mr*robot(x);
 Co = obstacle(y) - Mo*obstacle(x);
 X = (Cr - Co)/(Mo - Mr);
 Y = Mr * X + Cr;
-d = Edist(obstacle,[X, Y]);
+d = Edist(obstacle,[X, Y]); 
 %plot([robot(x),goal(x),obstacle(x),X],[robot(y),goal(y),obstacle(y),Y],'ro')
 %line([robot(x),goal(x)],[robot(y),goal(y)])
 %axis equal
