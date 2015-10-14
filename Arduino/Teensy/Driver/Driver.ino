@@ -104,49 +104,6 @@ void reset_timer() {
   {
     pwm_R = 0;
   }
-  /*
-      if (Rad_L < Left_Speed)
-      {
-        pwm_L++;
-        if (pwm_L > 255)
-        {
-          pwm_L = 255;
-          //digitalWrite(ledPin, HIGH);
-        }
-      }
-      else
-      {
-        pwm_L--;
-        //digitalWrite(ledPin, LOW);
-        if (pwm_L < 0)
-        {
-          pwm_L = 0;
-        }
-
-      }
-
-      if (Rad_R < Right_Speed)
-      {
-        pwm_R++;
-        if (pwm_R > 255)
-        {
-          pwm_R = 255;
-          //digitalWrite(ledPin, HIGH);
-        }
-      }
-      else
-      {
-        pwm_R--;
-        //digitalWrite(ledPin, LOW);
-        if (pwm_R < 0)
-        {
-          pwm_R = 0;
-        }
-
-
-      }
-      */
-
 }
 
 void Motor_R(int pwm, bool forward)
@@ -212,9 +169,7 @@ void loop() {
 
       case 'R':
         while (!Serial.available());
-        //Serial.println(Rad_L);
-        data = Serial.read();
-        Right_Speed = data - 48 ;
+        Right_Speed = getNumber();
         if (Right_Speed < 0)
           Right_Speed = 0;
         //Serial.println(Right_Speed);
@@ -252,38 +207,15 @@ void loop() {
 double getNumber() {
 
   char number[4];
-  int intNum[4];
+  double intNum[4];
   double result = 0;
   for (int i = 0; i < 4; i++) {
     number[i] = Serial.read();
     intNum[i] = number[i] - 48;
   }
   result = intNum[0] * 10 + intNum[1] + intNum[2] / 10 + intNum[3] / 100;
-  Serial.print(result);
+  //Serial.print(result);
   return result;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
