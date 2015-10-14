@@ -5,7 +5,7 @@
 byte byteRead;
 int ledPin = 11;
 int flashcount = 0;
-String message = String(123) + "$" + String(123);
+String message = String(123) + "$" + String(123);//"This is a message";
 
 void setup() {
   // Turn the Serial Protocol ON
@@ -25,19 +25,19 @@ void loop() {
         if (byteRead == 97) {
           flashcount++;
         }
-        Serial.println(byteRead);
+        //Serial.println(byteRead);
       } while (byteRead != 0x0A);
     }
     delay(500);
     digitalWrite(ledPin, LOW);
     delay(500);
-    Serial.print(message);
   }
-  
+  Serial.print(flashcount);
   digitalWrite(ledPin,LOW);
-  delay(2000);
+  delay(500);
   for (int i = 0; i<flashcount; i++) {
 
+    Serial.print(flashcount);
     digitalWrite(ledPin,HIGH);
     delay(100);
     digitalWrite(ledPin, LOW);
