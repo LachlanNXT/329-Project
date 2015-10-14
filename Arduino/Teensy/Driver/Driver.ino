@@ -5,9 +5,9 @@
 #define M3 4
 #define M4 12
 #define encoder_left 5
-#define encoder_right 7
+#define encoder_right 8
 
-int encoder_to_rev = 210;
+double encoder_to_rev = 909.72;
 boolean forward;
 
 volatile int state_L = 0;
@@ -23,15 +23,17 @@ volatile int pwm_R = 0;
 
 char input;
 byte pos = 0;
-int Left_Speed = 0;
-int Right_Speed = 0;
+double Left_Speed = 0;
+double Right_Speed = 0;
 char off_value = 50;
 bool Left_direction = true;
 bool Right_direction = true;
 char data;
-unsigned long lastMillis_L = 0;
 
 int ledPin = 11;
+
+int turnOff = 0;
+bool countOff = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -42,16 +44,15 @@ void setup() {
   pinMode(encoder_right, INPUT);
   attachInterrupt(encoder_left, doEncoderL, RISING);
   attachInterrupt(encoder_right, doEncoderR, RISING);
-  Timer3.initialize(10000); // 10000 micro seconds, 10 milliseconds
-  Timer3.attachInterrupt(reset_timer);
+  Timer3.initialize(10000); // 10000 micro seconds, 10 milliseconds, 0.01 seconds
+  Timer3.attachInterrupt(reset_timer); // attach timer interrupt
   //Serial.println("L=Left motor speed");
   //Serial.println("R=Right motor speed");
   //Serial.println("l=left direction(1 forward, 0 backward):  ");
   //Serial.println("r=right direction(1 forward, 0 backward):  ");
 
   pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, HIGH);
-
+  digitalWrite(ledPin, LOW);
 }
 
 void doEncoderL() {
@@ -63,17 +64,23 @@ void doEncoderR() {
 }
 
 void reset_timer() {
-  Serial.print("9$5");
+  if (countOff) {
+    turnOff++;
+    if (turnOff > 10) {
+      digitalWrite(ledPin, LOW);
+      countOff = false;
+    }
+  }
   count_L = state_L;
   count_R = state_R;
-  Rad_L = ((2 * pi) / encoder_to_rev / 100 * count_L);
-  Rad_R = ((2 * pi) / encoder_to_rev / 100 * count_R);
+  Rad_L = ((2 * pi) / encoder_to_rev * count_L) / .01;
+  Rad_R = ((2 * pi) / encoder_to_rev * count_R) / .01;
   state_L = 0;
   state_R = 0;
-/*
-  int dpwmL = round(10 * (Left_Speed - Rad_L));
 
-  int dpwmR = round(10 * (Right_Speed - Rad_R));
+  int dpwmL = round((Left_Speed - Rad_L));
+
+  int dpwmR = round((Right_Speed - Rad_R));
 
   pwm_L += dpwmL;
 
@@ -97,43 +104,48 @@ void reset_timer() {
   {
     pwm_R = 0;
   }
-*/
-    if (Rad_L < Left_Speed)
-    {
-      pwm_L++;
-      if (pwm_L > 255)
+  /*
+      if (Rad_L < Left_Speed)
       {
-        pwm_L = 255;
+        pwm_L++;
+        if (pwm_L > 255)
+        {
+          pwm_L = 255;
+          //digitalWrite(ledPin, HIGH);
+        }
       }
-    }
-    else
-    {
-      pwm_L--;
-      if (pwm_L < 0)
+      else
       {
-        pwm_L = 0;
-      }
+        pwm_L--;
+        //digitalWrite(ledPin, LOW);
+        if (pwm_L < 0)
+        {
+          pwm_L = 0;
+        }
 
-    }
-
-    if (Rad_R < Right_Speed)
-    {
-      pwm_R++;
-      if (pwm_R > 255)
-      {
-        pwm_R = 255;
-      }
-    }
-    else
-    {
-      pwm_R--;
-      if (pwm_R < 0)
-      {
-        pwm_R = 0;
       }
 
+      if (Rad_R < Right_Speed)
+      {
+        pwm_R++;
+        if (pwm_R > 255)
+        {
+          pwm_R = 255;
+          //digitalWrite(ledPin, HIGH);
+        }
+      }
+      else
+      {
+        pwm_R--;
+        //digitalWrite(ledPin, LOW);
+        if (pwm_R < 0)
+        {
+          pwm_R = 0;
+        }
 
-    }
+
+      }
+      */
 
 }
 
@@ -181,19 +193,23 @@ void loop() {
 
   Motor_L(pwm_L, true);
   Motor_R(pwm_R, true);
-  if (Serial.available()) {// first char read
+  // first char read
+  if (Serial.available()) {
+    digitalWrite(ledPin, HIGH);
+    countOff = true;
     data = Serial.read();
     switch (data) {
-      
+
       case 'L':
         while (!Serial.available()); //second char read
-        data = Serial.read();
-        Left_Speed = data - 48;
+        //data = Serial.read();
+        //Left_Speed = data - 48;
         // this can be anything or off_value can be anything. it apparently read ASCII values. let say L2 is pressed. once L is detected; Ascii value of 2 is 50. therefore, 2*50-50= 50, motor speed is sent as 50 pwm. find cooresponding ASCII values for higher speed.
+        Left_Speed = getNumber();
         if (Left_Speed < 0)
           Left_Speed = 0;
         break;
-        
+
       case 'R':
         while (!Serial.available());
         //Serial.println(Rad_L);
@@ -204,7 +220,7 @@ void loop() {
         //Serial.println(Right_Speed);
 
         break;
-        
+
       case 'l':
         while (!Serial.available());
         data = Serial.read();
@@ -217,7 +233,7 @@ void loop() {
           Left_direction = 0;
         }
         break;
-        
+
       case 'r':
         while (!Serial.available());
         data = Serial.read();
@@ -233,6 +249,20 @@ void loop() {
   }
 }
 
+double getNumber() {
+
+  char number[4];
+  int intNum[4];
+  double result = 0;
+  for (int i = 0; i < 4; i++) {
+    number[i] = Serial.read();
+    intNum[i] = number[i] - 48;
+  }
+  result = intNum[0] * 10 + intNum[1] + intNum[2] / 10 + intNum[3] / 100;
+  Serial.print(result);
+  return result;
+
+}
 
 
 
