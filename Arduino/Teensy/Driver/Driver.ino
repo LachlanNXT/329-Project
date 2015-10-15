@@ -35,6 +35,9 @@ int ledPin = 11;
 int turnOff = 0;
 bool countOff = false;
 
+int sendCount = 0;
+byte outNumber[4] = {0, 0, 0, 0};
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -64,6 +67,7 @@ void doEncoderR() {
 }
 
 void reset_timer() {
+
   if (countOff) {
     turnOff++;
     if (turnOff > 10) {
@@ -77,6 +81,34 @@ void reset_timer() {
   Rad_R = ((2 * pi) / encoder_to_rev * count_R) / .01;
   state_L = 0;
   state_R = 0;
+
+  sendCount++;
+  if (sendCount >= 30) {
+    makeNumber(Rad_L, outNumber);
+    byte* Lsend = outNumber;
+    makeNumber(Rad_R, outNumber);
+    byte* Rsend = outNumber;
+    Serial.print(outNumber[0]);
+    Serial.write("L");
+    Serial.print(Lsend[0]);
+    Serial.print(Lsend[1]);
+    Serial.print(Lsend[2]);
+    Serial.print(Lsend[3]);
+    Serial.write(":");
+    Serial.print(Rad_L);
+    Serial.write(":");
+    Serial.print(pwm_L);
+    Serial.write(":");
+    Serial.print(Left_Speed);
+    Serial.write("   ");
+    Serial.write("R");
+    Serial.print(Rsend[0]);
+    Serial.print(Rsend[1]);
+    Serial.print(Rsend[2]);
+    Serial.print(Rsend[3]);
+    Serial.println();
+    sendCount = 0;
+  }
 
   int dpwmL = round((Left_Speed - Rad_L));
 
@@ -216,6 +248,18 @@ double getNumber() {
   result = intNum[0] * 10 + intNum[1] + intNum[2] / 10 + intNum[3] / 100;
   //Serial.print(result);
   return result;
+
+}
+
+void makeNumber(double inNumber, byte outNumber[]) {
+  double one = floor(inNumber / 10);
+  double two = floor(inNumber - one * 10);
+  double three = floor((inNumber - one * 10 - two) * 10);
+  double four = floor((inNumber - one * 10 - two) * 100 - three * 10);
+  outNumber[0] = (byte ((int) (one)));
+  outNumber[2] = (byte ((int) (two)));
+  outNumber[3] = (byte ((int) (three)));
+  outNumber[4] = (byte ((int) (four)));
 
 }
 
