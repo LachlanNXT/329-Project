@@ -114,6 +114,7 @@ void reset_timer() {
   }
   
   if (Left_Speed == 0) {
+    pwm_L = 0;
     Stop_L();
   }
   double newErrorL = Left_Speed - Rad_L;
@@ -124,6 +125,7 @@ void reset_timer() {
   int dpwmL = round(Kp*errorL + Ki*sumL + Kd*diffL);
   
   if (Right_Speed == 0) {
+    pwm_R = 0;
     Stop_R();
   }
   double newErrorR = Right_Speed - Rad_R;
