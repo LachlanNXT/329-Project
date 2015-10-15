@@ -383,7 +383,6 @@ while (finished == 0)
         end
         if MCy(i)>FIELD_SIZE_Y+0.2
             MCy(i) = min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand;
-            min(MCy)
         end
         if MCy(i)<0-0.2
             MCy(i) = max(MCy)*rand;
