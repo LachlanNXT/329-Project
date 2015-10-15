@@ -1,4 +1,5 @@
 #include "TimerThree.h"
+#include "Math.h"
 
 #define M1 14
 #define M2 10
@@ -7,7 +8,7 @@
 #define encoder_left 5
 #define encoder_right 8
 
-double encoder_to_rev = 909.72;
+const double encoder_to_rev = 227.43;
 boolean forward;
 
 volatile int state_L = 0;
@@ -21,22 +22,31 @@ volatile double Rad_R;
 volatile int pwm_L = 0;
 volatile int pwm_R = 0;
 
-char input;
-byte pos = 0;
 double Left_Speed = 0;
 double Right_Speed = 0;
-char off_value = 50;
 bool Left_direction = true;
 bool Right_direction = true;
 char data;
 
 int ledPin = 11;
 
+//serial recieve light
 int turnOff = 0;
-bool countOff = false;
+volatile bool countOff = false;
 
-int sendCount = 0;
-byte outNumber[4] = {0, 0, 0, 0};
+//serial sending
+volatile int sendCount = 0;
+byte Lsend[4] = {0, 0, 0, 0};
+byte Rsend[4] = {0, 0, 0, 0};
+
+//PID
+double errorL = 0;
+double errorR = 0;
+double sumL = 0;
+double sumR = 0;
+const double Kp = 3;
+const double Ki = 0;
+const double Kd = 3;
 
 void setup() {
   // put your setup code here, to run once:
@@ -47,7 +57,7 @@ void setup() {
   pinMode(encoder_right, INPUT);
   attachInterrupt(encoder_left, doEncoderL, RISING);
   attachInterrupt(encoder_right, doEncoderR, RISING);
-  Timer3.initialize(10000); // 10000 micro seconds, 10 milliseconds, 0.01 seconds
+  Timer3.initialize(100000); // 100000 micro seconds, 100 milliseconds, 0.1 seconds
   Timer3.attachInterrupt(reset_timer); // attach timer interrupt
   //Serial.println("L=Left motor speed");
   //Serial.println("R=Right motor speed");
@@ -69,50 +79,59 @@ void doEncoderR() {
 void reset_timer() {
 
   if (countOff) {
-    turnOff++;
-    if (turnOff > 10) {
+    //turnOff++;
+    //if (turnOff > 10) {
       digitalWrite(ledPin, LOW);
       countOff = false;
-    }
+    //}
   }
   count_L = state_L;
   count_R = state_R;
-  Rad_L = ((2 * pi) / encoder_to_rev * count_L) / .01;
-  Rad_R = ((2 * pi) / encoder_to_rev * count_R) / .01;
+  Rad_L = ((2 * pi) / encoder_to_rev * count_L) / .1;
+  Rad_R = ((2 * pi) / encoder_to_rev * count_R) / .1;
   state_L = 0;
   state_R = 0;
 
   sendCount++;
-  if (sendCount >= 30) {
-    makeNumber(Rad_L, outNumber);
-    byte* Lsend = outNumber;
-    makeNumber(Rad_R, outNumber);
-    byte* Rsend = outNumber;
-    Serial.print(outNumber[0]);
-    Serial.write("L");
+  if (sendCount >= 3) {
+    makeNumber(Rad_L, Lsend);
+    makeNumber(Rad_R, Rsend);
+    Serial.write("SL");
     Serial.print(Lsend[0]);
     Serial.print(Lsend[1]);
     Serial.print(Lsend[2]);
     Serial.print(Lsend[3]);
-    Serial.write(":");
-    Serial.print(Rad_L);
-    Serial.write(":");
-    Serial.print(pwm_L);
-    Serial.write(":");
-    Serial.print(Left_Speed);
-    Serial.write("   ");
     Serial.write("R");
     Serial.print(Rsend[0]);
     Serial.print(Rsend[1]);
     Serial.print(Rsend[2]);
     Serial.print(Rsend[3]);
+    Serial.write("E");
     Serial.println();
     sendCount = 0;
+    digitalWrite(ledPin, HIGH);
+    countOff = true;
   }
+  
+  if (Left_Speed == 0) {
+    Stop_L();
+  }
+  double newErrorL = Left_Speed - Rad_L;
+  double diffL = newErrorL - errorL;
+  sumL = sumL + newErrorL;
+  errorL = newErrorL;
+  
+  int dpwmL = round(Kp*errorL + Ki*sumL + Kd*diffL);
+  
+  if (Right_Speed == 0) {
+    Stop_R();
+  }
+  double newErrorR = Right_Speed - Rad_R;
+  double diffR = newErrorR - errorR;
+  sumR = sumR + newErrorR;
+  errorR = newErrorR;
 
-  int dpwmL = round((Left_Speed - Rad_L));
-
-  int dpwmR = round((Right_Speed - Rad_R));
+  int dpwmR = round(Kp*errorR + Ki*sumR + Kd*diffR);
 
   pwm_L += dpwmL;
 
@@ -193,7 +212,7 @@ void loop() {
         while (!Serial.available()); //second char read
         //data = Serial.read();
         //Left_Speed = data - 48;
-        // this can be anything or off_value can be anything. it apparently read ASCII values. let say L2 is pressed. once L is detected; Ascii value of 2 is 50. therefore, 2*50-50= 50, motor speed is sent as 50 pwm. find cooresponding ASCII values for higher speed.
+        // it apparently read ASCII values. let say L2 is pressed. once L is detected; Ascii value of 2 is 50. therefore, 2*50-50= 50, motor speed is sent as 50 pwm. find cooresponding ASCII values for higher speed.
         Left_Speed = getNumber();
         if (Left_Speed < 0)
           Left_Speed = 0;
@@ -257,9 +276,9 @@ void makeNumber(double inNumber, byte outNumber[]) {
   double three = floor((inNumber - one * 10 - two) * 10);
   double four = floor((inNumber - one * 10 - two) * 100 - three * 10);
   outNumber[0] = (byte ((int) (one)));
-  outNumber[2] = (byte ((int) (two)));
-  outNumber[3] = (byte ((int) (three)));
-  outNumber[4] = (byte ((int) (four)));
+  outNumber[1] = (byte ((int) (two)));
+  outNumber[2] = (byte ((int) (three)));
+  outNumber[3] = (byte ((int) (four)));
 
 }
 
