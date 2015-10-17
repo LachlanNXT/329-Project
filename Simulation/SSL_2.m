@@ -110,7 +110,7 @@ while (finished == 0)
     %Controller for a differential robot
     
     % robot position. All other positions are robot relative
-    rPos = [robot(X), robot(Y)];
+    rPos = rEstPos;
     bPos = [ball(X), ball(Y)];
     posB = bPos - rPos;
     % angle of ball relative to robot
@@ -376,16 +376,16 @@ while (finished == 0)
     for i=1:Pcount
         
         if MCx(i)>FIELD_SIZE_X+0.2
-            MCx(i) = min(MCx) + (FIELD_SIZE_X-min(MCx))*rand;
+            MCx(i) = FIELD_SIZE_X*rand; % min(MCx) + (FIELD_SIZE_X-min(MCx))*rand;
         end
         if MCx(i)<0-0.2
-            MCx(i) = max(MCx)*rand;
+            MCx(i) = FIELD_SIZE_X*rand; %max(MCx)*rand;
         end
         if MCy(i)>FIELD_SIZE_Y+0.2
-            MCy(i) = min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand;
+            MCy(i) = FIELD_SIZE_Y*rand; %min(MCy) + (FIELD_SIZE_Y-min(MCy))*rand;
         end
         if MCy(i)<0-0.2
-            MCy(i) = max(MCy)*rand;
+            MCy(i) = FIELD_SIZE_Y*rand; %max(MCy)*rand;
         end
         
     end

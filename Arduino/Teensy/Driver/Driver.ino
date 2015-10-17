@@ -201,8 +201,8 @@ void Stop_L()
 void loop() {
   // put your main code here, to run repeatedly:
 
-  Motor_L(pwm_L, true);
-  Motor_R(pwm_R, true);
+  Motor_L(pwm_L, Left_direction);
+  Motor_R(pwm_R, Right_direction);
   // first char read
   if (Serial.available()) {
     digitalWrite(ledPin, HIGH);
