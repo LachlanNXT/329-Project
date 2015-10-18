@@ -97,8 +97,9 @@ TIME_STEP = 0.02;
 
 % start positions and velocities
 ball = [FIELD_SIZE_X/2.0+0.1, FIELD_SIZE_Y/2.0, 0, 0, 0, 0];
-robot = [0.01, 0.01, 0, v*cos(theta), v*sin(theta), 0];
+robot = [1, 1, 0, v*cos(theta), v*sin(theta), 0];
 robotEst = zeros(1,6);
+rEstPos = [0,0];
 thetaEst = 0;
 obstacles = [0.1 0.2; 0.75 0.4; 1.2 1.5];
 corners = [0,0; 0,FIELD_SIZE_Y; FIELD_SIZE_X,0; FIELD_SIZE_X,FIELD_SIZE_Y];
@@ -110,7 +111,7 @@ while (finished == 0)
     %Controller for a differential robot
     
     % robot position. All other positions are robot relative
-    rPos = rEstPos;
+    rPos = [robot(X),robot(Y)];
     bPos = [ball(X), ball(Y)];
     posB = bPos - rPos;
     % angle of ball relative to robot
@@ -186,7 +187,7 @@ while (finished == 0)
             search = 0;
         end
         measurementError = measurementSD*randn(1,2);
-        lastSeen = [ball(X), ball(Y)] + measurementError;
+        lastSeen = [rPosEst(X), rPosEst(Y)] + measurementError;
     else
         search = 1;
         % if not seen head to centre of field
