@@ -187,7 +187,7 @@ while (finished == 0)
             search = 0;
         end
         measurementError = measurementSD*randn(1,2);
-        lastSeen = [rPosEst(X), rPosEst(Y)] + measurementError;
+        lastSeen = [rEstPos(X), rEstPos(Y)] + measurementError;
     else
         search = 1;
         % if not seen head to centre of field
