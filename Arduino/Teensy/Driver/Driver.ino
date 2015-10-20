@@ -93,9 +93,20 @@ void reset_timer() {
   state_R = 0;
 
   sendCount++;
+  int ldir, rdir;
   if (sendCount >= 3) {
-    makeNumber(Rad_L, Lsend);
-    makeNumber(Rad_R, Rsend);
+    if (Left_direction) {
+      ldir = 1;
+    } else {
+      ldir = 0;
+    }
+    if (Right_direction) {
+      rdir = 1;
+    } else {
+      rdir = 0;
+    }
+    makeNumber(abs(Rad_L), Lsend);
+    makeNumber(abs(Rad_R), Rsend);
     Serial.write("SL");
     Serial.print(Lsend[0]);
     Serial.print(Lsend[1]);
@@ -107,6 +118,10 @@ void reset_timer() {
     Serial.print(Rsend[2]);
     Serial.print(Rsend[3]);
     Serial.write("E");
+    Serial.print((byte ((int) (ldir))));
+    Serial.write("P");
+    Serial.print((byte ((int) (rdir))));
+    Serial.write("N");
     Serial.println();
     sendCount = 0;
     digitalWrite(ledPin, HIGH);
