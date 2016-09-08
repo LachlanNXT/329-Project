@@ -124,7 +124,7 @@ void reset_timer() {
     Serial.write("N");
     Serial.println();
     sendCount = 0;
-    digitalWrite(ledPin, HIGH);
+    //digitalWrite(ledPin, HIGH);
     countOff = true;
   }
   
@@ -220,7 +220,7 @@ void loop() {
   Motor_R(pwm_R, Right_direction);
   // first char read
   if (Serial.available()) {
-    digitalWrite(ledPin, HIGH);
+    //digitalWrite(ledPin, HIGH);
     countOff = true;
     data = Serial.read();
     switch (data) {
